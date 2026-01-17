@@ -17,7 +17,7 @@ def get_play_links():
     tables = soup.find_all("table")
     table = tables[1]
     links = []
-    print(table)
+
     for a in table.find_all("a"):
         href = a.get("href")
         if href:
@@ -33,30 +33,35 @@ def get_entire_play_link(page_url):
         return urljoin(page_url, a_tag.get("href"))
     return None
 
-def extract_text(url):
-    """Extract and return all visible text from a page."""
+def extract_blockquote_text(url):
+    """Extract text from <blockquote> elements, ignoring lines starting with 'Enter'."""
     soup = get_soup(url)
-    for element in soup(["script", "style"]):
-        element.decompose()
-    text = soup.get_text(separator="\n")
-    lines = [line.strip() for line in text.splitlines() if line.strip()]
-    return "\n".join(lines)
+    texts = []
+
+    # Find all blockquote elements
+    for block in soup.find_all("blockquote"):
+        for line in block.get_text(separator="\n").splitlines():
+            line = line.strip()
+            if line and not line.startswith("Enter") and not "xeunt" in line.lower() and not "exit" in line.lower():
+                texts.append(line)
+    
+    return "\n".join(texts)
 
 def main():
     play_links = get_play_links()
-    print(play_links)
+
     with open(OUTPUT_FILE, "w", encoding="utf-8") as f:
         for link in play_links:
             if "Sonnets" in link:  # special handling for Sonnets
-                text = extract_text(link)
-                f.write(f"\n{text}\n")
+                text = extract_blockquote_text(link)
+                f.write(f"\n\n{text}\n\n")
             else:
                 entire_play_url = get_entire_play_link(link)
                 if entire_play_url:
-                    text = extract_text(entire_play_url)
-                    f.write(f"\n{text}\n")
+                    text = extract_blockquote_text(entire_play_url)
+                    f.write(f"\n\n{text}\n\n")
 
-    print(f"All plays and sonnets saved in {OUTPUT_FILE}")
+    print(f"All blockquote texts saved in {OUTPUT_FILE}")
 
 if __name__ == "__main__":
     main()
